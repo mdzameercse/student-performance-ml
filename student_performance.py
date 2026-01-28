@@ -2,43 +2,61 @@
 # Author: Md Zameer
 
 import pandas as pd
+import numpy as np
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-# 1. Load dataset
-# Sample dataset: each row = student, columns = hours_study, attendance(%), assignments_submitted, previous_score
-data = pd.read_csv("data.csv")
+data = pd.read_csv("/content/data.csv")
 
-# 2. Features (X) and Target (y)
+#top 5 rows printing
+print("First 5 rows:\n", data.head())
+print("\nData Info:\n")
+print(data.info())
+print("\nMissing values:\n", data.isnull().sum())
+
+#  Feature selection & target
 X = data[['hours_study', 'attendance', 'assignments_submitted', 'previous_score']]
 y = data['pass_fail']  # 1 = Pass, 0 = Fail
 
-# 3. Train-test split (80-20)
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+#  Train-test split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
 
-# 4. Random Forest model
-model = RandomForestClassifier(n_estimators=100, random_state=42)
-model.fit(X_train, y_train)
+ #4. Feature scaling
 
-# 5. Predictions
-y_pred = model.predict(X_test)
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
 
-# 6. Evaluation
+#  Random Forest model
+model = RandomForestClassifier(n_estimators=200, random_state=42, max_depth=5, min_samples_split=5)
+model.fit(X_train_scaled, y_train)
+
+#  Predictions
+y_pred = model.predict(X_test_scaled)
+
+# Evaluation
 accuracy = accuracy_score(y_test, y_pred)
-print(f"Model Accuracy: {accuracy * 100:.2f}%")
-print("\nConfusion Matrix:\n", confusion_matrix(y_test, y_pred))
+print(f"\nModel Accuracy: {accuracy * 100:.2f}%")
+
+cm = confusion_matrix(y_test, y_pred)
+print("\nConfusion Matrix:\n", cm)
+
 print("\nClassification Report:\n", classification_report(y_test, y_pred))
 
-# 7. Feature importance visualization
-importances = model.feature_importances_
-features = X.columns
-plt.figure(figsize=(6, 4))
-sns.barplot(x=importances, y=features)
-plt.title("Feature Importance")
-plt.xlabel("Importance")
+
+corr = data.corr()['pass_fail'].drop('pass_fail')  # exclude target itself
+
+# Plot correlation as feature importance
+plt.figure(figsize=(6,4))
+sns.barplot(x=corr.values, y=corr.index, palette="viridis")
+plt.title("Feature Importance (Correlation with Target)")
+plt.xlabel("Correlation with Pass/Fail")
 plt.ylabel("Features")
 plt.tight_layout()
 plt.show()
+
+
